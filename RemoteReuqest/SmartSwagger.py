@@ -214,19 +214,19 @@ def __generateService(aPIInterfaceMaps, filepath):
                 paramConstructorList.append(queryParamConstructor)
             for bodyParam in aPIMethod.get('BodyParams'):
                 # param description
-                bodyParamDes = '@param ' + bodyParam.get('name') + ' ' + bodyParam.get('description')
+                bodyParamDes = '@param ' + bodyParam.get('name') + ' ' + str(bodyParam.get('description'))
                 paramDescriptionList.append(bodyParamDes)
 
                 #  method param list
                 if bodyParam.get('required'):
                     if 'schema' in bodyParam:
-                        bodyParamMember = bodyParam.get('name') + ':' + bodyParam.get('schema').get('originalRef')
+                        bodyParamMember = bodyParam.get('name') + ':' + str(bodyParam.get('schema').get('originalRef'))
                     else:
                         bodyParamMember = bodyParam.get('name') + ': any'
 
                 else:
                     if 'schema' in bodyParam:
-                        bodyParamMember = bodyParam.get('name') + ':' + bodyParam.get('schema').get('originalRef')
+                        bodyParamMember = bodyParam.get('name') + ':' + str(bodyParam.get('schema').get('originalRef'))
                     else:
                         bodyParamMember = bodyParam.get('name') + '?: any'
                 paramMemberList.append(bodyParamMember)
