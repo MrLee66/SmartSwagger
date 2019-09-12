@@ -1,0 +1,4 @@
+{
+ "ReplaceRules":{"integer":"number"},
+ "ExcludeDTO":["AuditProjectBaseDTO","CommonErrorDTO","PageDataDTO«AuditNoticeDTO»","SimpleDataDTO«boolean»","UserBaseDTO"]
+}

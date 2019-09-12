@@ -1,0 +1,4 @@
+ /**
+  * ${PropertyDescription}
+  */
+  ${PropertyDefine};
