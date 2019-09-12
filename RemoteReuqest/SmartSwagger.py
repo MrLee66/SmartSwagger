@@ -60,6 +60,11 @@ def __generateModel(interfaceModel, filepath):
     dTOTemplateContent = dTOTemplateContent.replace('${Describe}', str(interfaceModel.get('description')))
     dTOTemplateContent = dTOTemplateContent.replace('${DTOName}', interfaceModel['title'])
 
+    # global replace rules
+    f = open('config.txt', 'r')
+    rules = json.loads(f.read()).get('ReplaceRules')
+    for toReplace in rules:
+        dTOTemplateContent = dTOTemplateContent.replace(toReplace, rules[toReplace])
     # print to file
     f = open(os.path.join(filepath, interfaceModel['title']) + '.ts', 'w', encoding='UTF-8')
     f.write(dTOTemplateContent)
