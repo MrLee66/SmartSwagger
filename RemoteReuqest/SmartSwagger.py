@@ -9,18 +9,33 @@ import sys
 
 
 # DTO Generator
-def __generateModel(interfaceModel, filepath):
+def __generateModel(interfaceModel, filepath, matchedList):
     # read exclude DTO
-    excludeRules = json.loads(open('config.txt').read())['ExcludeDTO']
+    includeModels = json.loads(open('config.json').read())['IncludesModels']
 
-    # Exclude Reject Generated DTO
-    if interfaceModel['title'] in excludeRules:
+    excludeModels = json.loads(open('config.json').read())['ExcludeModels']
+
+    # exclude models by config
+    for excludeModel in excludeModels:
+        if excludeModel in interfaceModel['title']:
+            return
+
+    isRelated = [False]
+
+    # judge if model is needed
+    for matchStr in matchedList:
+        if matchStr in interfaceModel['title']:
+            isRelated[0] = True
+            break
+
+    # include extra need to be generated DTOs
+    if interfaceModel['title'] not in includeModels and not isRelated[0]:
         return
 
-    dTOTemplate = open('DTOTemplate.txt', 'r')
+    dTOTemplate = open('DTOTemplate.tpl', 'r')
     dTOTemplateContent = dTOTemplate.read()
 
-    propertyTemplate = open('PropertyTemplate.txt', 'r')
+    propertyTemplate = open('PropertyTemplate.tpl', 'r')
     propertyTemplateContent = propertyTemplate.read()
     requiredList = []
     if 'required' in interfaceModel:
@@ -61,7 +76,7 @@ def __generateModel(interfaceModel, filepath):
     dTOTemplateContent = dTOTemplateContent.replace('${DTOName}', interfaceModel['title'])
 
     # global replace rules
-    f = open('config.txt', 'r')
+    f = open('config.json', 'r')
     rules = json.loads(f.read()).get('ReplaceRules')
     for toReplace in rules:
         dTOTemplateContent = dTOTemplateContent.replace(toReplace, rules[toReplace])
@@ -135,10 +150,11 @@ def __generateChildUrl():
 
 # API Service Generator
 def __generateService(aPIInterfaceMaps, filepath):
-    serviceTemplate = open('ServiceTemplate.txt')
+    print('\033[1;34m*********Begin To Process Services .).)*********\033[0m')
+    serviceTemplate = open('ServiceTemplate.tpl')
     serviceTemplateContent = serviceTemplate.read()
 
-    methodTemplate = open('MethodTemplate.txt')
+    methodTemplate = open('MethodTemplate.tpl')
     methodTemplateContent = methodTemplate.read()
 
     for aPIInterFaceKey in aPIInterfaceMaps:
@@ -281,13 +297,14 @@ def __generateService(aPIInterfaceMaps, filepath):
                                                                           time.strftime("%Y-%m-%d",
                                                                                         time.localtime()))
         # global replace rules
-        f = open('config.txt', 'r')
+        f = open('config.json', 'r')
         rules = json.loads(f.read()).get('ReplaceRules')
         for toReplace in rules:
             aPIInterfaceServiceTemplate = aPIInterfaceServiceTemplate.replace(toReplace, rules[toReplace])
         # print to file
         f = open(os.path.join(filepath, aPIInfo[0].get('Name')) + '.ts', 'w', encoding='UTF-8')
         f.write(aPIInterfaceServiceTemplate)
+    print('\033[1;32mGenerate Services Successfully! (^_^)\033[0m')
 
 
 # cmd process
@@ -297,25 +314,44 @@ savepath = ''
 
 parser = argparse.ArgumentParser(description='The API Tool To Help You Generate Files Easily!')
 
-parser.add_argument('url', help='The Swagger Address')
+parser.add_argument('-url', help='The Swagger Address')
 
 parser.add_argument('-group', help='The API Group Name')
 
+parser.add_argument('-address', help='The Total Interface Address')
+
 parser.add_argument('-savepath', help='The Path To Save Generated Files')
+
+parser.add_argument('-noservice', help='Whether to generate services', action='store_true')
 
 # parse cmd params
 args = parser.parse_args()
 
 if args.url and args.group and args.savepath:
     groupSplitList = str(args.group).split(' ')
-    swagger_address = args.url + '?group=' + '%20'.join(groupSplitList)
+    swagger_address = args.url + '/api-docs?group=' + '%20'.join(groupSplitList)
     if not os.path.isdir(args.savepath):
-        print('Please Choose a Directory Not ' + args.savepath)
+        print('\033[1;31mPlease Choose a Directory Not\033[0m', end='')
+        print('\033[1;33m' + + args.savepath + '\033[0m')
+        sys.exit(0)
+    response = requests.get(swagger_address)
+    if response.status_code != 200:
+        print('\033[1;31mPlease Check The Url: status code=>  \033[0m', end='')
+        print('\033[1;33m' + str(response.status_code) + '\033[0m')
         sys.exit(0)
     content = json.loads(str(requests.get(swagger_address).content, 'UTF-8'))
     savepath = args.savepath
+
+elif args.address and args.savepath:
+    response = requests.get(args.address)
+    if response.status_code != 200:
+        print('\033[1;31mPlease Check The Url: status code=>  \033[0m', end='')
+        print('\033[1;33m' + str(response.status_code) + '\033[0m')
+        sys.exit(0)
+    content = json.loads(str(requests.get(args.address).content, 'UTF-8'))
+    savepath = args.savepath
 else:
-    print('Please Check Your Params! We Need [url]&[group]&[savepath]')
+    print('\033[1;31mPlease Check Your Params! We Need [url]&[group]&[savepath]\033[0m')
     sys.exit(0)
 # begin to process
 tags = []
@@ -336,14 +372,6 @@ for tag in tags:
     aPIMaps[tag].append(totalAPIDes.get(tag))
 aPIs = content['paths']
 
-# models process
-
-interfaceModels = content['definitions']
-
-for interfaceModelKey in interfaceModels:
-    model = interfaceModels[interfaceModelKey]
-    __generateModel(model, savepath)
-
 constructInfos = []
 
 for key in aPIs:
@@ -351,4 +379,31 @@ for key in aPIs:
 __divideGroups()
 __generateChildUrl()
 
-__generateService(aPIMaps, savepath)
+matchList = []
+
+for key in aPIMaps:
+    for member in aPIMaps[key]:
+        if 'BaseUrl' in member:
+            pathSplitList = str(member['BaseUrl']).split('/')
+            matchList.append(str(pathSplitList[len(pathSplitList) - 1]))
+            break
+
+# models process
+
+interfaceModels = content['definitions']
+# remind info
+print('\033[1;35mAuto Find Key Words:\033[0m', end='')
+print('\033[1;33m' + str(matchList) + '\033[0m')
+
+print('\033[1;34m*********Begin To Process Models .).)*********\033[0m')
+
+matchList = list(map(lambda x: x[:-3].capitalize(), matchList))
+
+for interfaceModelKey in interfaceModels:
+    model = interfaceModels[interfaceModelKey]
+    __generateModel(model, savepath, matchList)
+print('\033[1;32mGenerate Models Successfully! (^_^)\033[0m')
+# services process,judge by param to decide whether to generate service
+
+if not args.noservice:
+    __generateService(aPIMaps, savepath)
