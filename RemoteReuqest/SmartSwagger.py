@@ -322,7 +322,7 @@ parser.add_argument('-address', help='The Total Interface Address')
 
 parser.add_argument('-savepath', help='The Path To Save Generated Files')
 
-parser.add_argument('-noservice', help='Whether to generate services', action='store_true')
+parser.add_argument('-noservice', help='Don Not  To Generate Services', action='store_true')
 
 # parse cmd params
 args = parser.parse_args()
@@ -351,7 +351,7 @@ elif args.address and args.savepath:
     content = json.loads(str(requests.get(args.address).content, 'UTF-8'))
     savepath = args.savepath
 else:
-    print('\033[1;31mPlease Check Your Params! We Need [url]&[group]&[savepath]\033[0m')
+    print('\033[1;31mPlease Check Your Params! We Need [url]&[group]&[savepath] || [address]&[savepath]\033[0m')
     sys.exit(0)
 # begin to process
 tags = []
