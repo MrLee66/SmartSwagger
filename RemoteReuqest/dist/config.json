@@ -1,6 +1,0 @@
-{
- "ReplaceRules":{"integer":"number"},
- "IncludesModels":[],
- "ExcludeModels":["PageDataDTO"]
-}
-
